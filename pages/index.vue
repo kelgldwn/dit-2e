@@ -184,7 +184,7 @@ export default {
       this.$axios
         .put(`/customers/${this.editForm.id}`, this.editForm)
         .then(() => {
-          alert("Customer updated successfully!");
+          alert("Nigger updated successfully!");
           this.editDialog = false;
           this.getCustomers(); // refresh list
         })
@@ -194,16 +194,16 @@ export default {
         });
     },
     deleteCustomer(id) {
-      if (confirm("Are you sure you want to delete this customer?")) {
+      if (confirm("Nigger are you sure about this shi?")) {
         this.$axios
           .delete(`/customers/${id}`)
           .then(() => {
-            alert("Customer deleted successfully!");
+            alert("Nigger deleted successfully!");
             this.getCustomers();
           })
           .catch((err) => {
             console.error(err);
-            alert("Error deleting customer.");
+            alert("Error deleting Nigger.");
           });
       }
     },
