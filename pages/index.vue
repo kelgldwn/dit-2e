@@ -1,119 +1,215 @@
 <template>
   <v-row justify="center" align="center">
     <v-col cols="12">
+      <!-- Search -->
+      <v-text-field
+        v-model="search"
+        label="Search customers"
+        prepend-inner-icon="mdi-magnify"
+        outlined
+        dense
+        class="mb-4"
+      ></v-text-field>
+
+      <!-- Data Table -->
       <v-data-table
-    :headers="headers"
-    :items="customers"
-    :items-per-page="10"
-    class="elevation-1"
-    :loading="loading"
-    loading-text="Loading...Please wait"
-  >
-  <template v-slot:item.profilePicture="{ item }">
-   <v-img
-  lazy-src="https://picsum.photos/id/11/10/6"
-  max-height="80"
-  max-width="80"
-  :src="item.profilePicture"
-></v-img>
- <v-badge 
-          color="blue"
-          content="VIP"
-          v-if="item.isVip == true"
-          offset-x=""
-        ></v-badge>
-        <v-avatar size="60">  
-        
-        </v-avatar>
+        :headers="headers"
+        :items="filteredCustomers"
+        :items-per-page="itemsPerPage"
+        class="elevation-1"
+        :loading="loading"
+        loading-text="Loading... Please wait"
+      >
+        <!-- Profile Picture -->
+        <template v-slot:item.profilePicture="{ item }">
+          <v-avatar size="60">
+            <v-img
+              :src="item.profilePicture"
+              lazy-src="https://picsum.photos/id/11/10/6"
+            ></v-img>
+          </v-avatar>
+          <v-badge v-if="item.isVip" color="blue" content="VIP" class="ml-2" />
+        </template>
 
-      </template>
-       <template v-slot:item.actions="{ item }">
-        <v-btn color="primary" @click="getCustomersDetails(item)">View</v-btn>
-       </template>
-    </v-data-table>
+        <!-- Actions -->
+        <template v-slot:item.actions="{ item }">
+          <v-btn small color="primary" @click="getCustomersDetails(item)">
+            <v-icon left>mdi-eye</v-icon> View
+          </v-btn>
+          <v-btn small color="orange" @click="openEditDialog(item)">
+            <v-icon left>mdi-pencil</v-icon> Edit
+          </v-btn>
+          <v-btn small color="red" @click="deleteCustomer(item.id)">
+            <v-icon left>mdi-delete</v-icon> Delete
+          </v-btn>
+        </template>
+      </v-data-table>
 
-    <v-dialog v-model="customerDialog" width="500">
-      
-      <v-card>
-        <v-card-title class="text-h5 purple"><v-icon>mdi-information</v-icon> <v-spacer></v-spacer>
-        Customer Details <v-spacer></v-spacer>
-      <v-btn color="pink"> <v-icon>mdi-close</v-icon></v-btn>
+      <!-- Customer Details Dialog -->
+<v-dialog v-model="customerDialog" width="500">
+  <v-card>
+    <v-card-title class="justify-center">
+      <v-avatar size="120">
+        <v-img :src="customerPhoto" />
+      </v-avatar>
     </v-card-title>
-    <v-spacer></v-spacer>
 
-      </v-card>
-        <v-card-actions> </v-card-actions>  
-        <v-card-text>Name</v-card-text>
-        <v-card-actions></v-card-actions>
-        <v-card-text>Email</v-card-text>
-        <v-card-actions> </v-card-actions>
-        <v-card-text>Phone #</v-card-text>
-        <v-card-actions> </v-card-actions>
-        <v-card-text>Age</v-card-text>
-        <v-card-actions> </v-card-actions>
+    <v-card-subtitle class="text-center mt-2">
+      <strong>{{ customerName }}</strong>
+    </v-card-subtitle>
 
-        
-      </v-card>
-    </v-dialog>
-  </v-col>
+    <v-card-text class="text-center">
+      <p><strong>Email:</strong> {{ customerEmail }}</p>
+      <p><strong>Phone:</strong> {{ customerPhone }}</p>
+      <p><strong>Age:</strong> {{ customerAge }}</p>
+    </v-card-text>
+
+    <v-card-actions>
+      <v-spacer></v-spacer>
+      <v-btn color="primary" text @click="customerDialog = false">Close</v-btn>
+    </v-card-actions>
+  </v-card>
+</v-dialog>
+
+      <!-- Edit Customer Dialog -->
+      <v-dialog v-model="editDialog" width="500">
+        <v-card>
+          <v-card-title>
+            <v-icon class="mr-2">mdi-pencil</v-icon>
+            Idit Customir
+            <v-spacer></v-spacer>
+            <v-btn icon @click="editDialog = false">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </v-card-title>
+          <v-card-text>
+            <v-text-field v-model="editForm.name" label="Name" outlined />
+            <v-text-field v-model="editForm.email" label="Email" outlined />
+            <v-text-field v-model="editForm.phone" label="Phone" outlined />
+            <v-text-field
+              v-model="editForm.age"
+              label="Age"
+              outlined
+              type="number"
+            />
+            <v-switch v-model="editForm.isVip" label="VIP Customer" />
+          </v-card-text>
+          <v-card-actions>
+            <v-btn color="primary" @click="saveEdit">Save</v-btn>
+            <v-spacer></v-spacer>
+            <v-btn text @click="editDialog = false">Cancel</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </v-col>
   </v-row>
 </template>
 
 <script>
 export default {
-  name: 'IndexPage',
+  name: "IndexPage",
   data() {
-    return{
+    return {
       headers: [
-          {
+        { text: "Photo", value: "profilePicture" },
+        { text: "Name", value: "name" },
+        { text: "Email", value: "email" },
+        { text: "Phone", value: "phone" },
+        { text: "Address", value: "address" },
+        { text: "Age", value: "age" },
+        { text: "Status", value: "isVip" },
+        { text: "Actions", value: "actions", sortable: false },
+      ],
+      customers: [],
+      loading: true,
+      search: "",
+      itemsPerPage: 10,
 
-          },
-          { text: 'Photo', value: 'profilePicture' },
-          { text: 'Name', value: 'name ' },
-          { text: 'Email', value: 'email' },
-          { text: 'Phone', value: 'phone' },
-          { text: 'Address', value: 'protein' },
-          { text: 'Age', value: 'age'},
-          { text: 'Status', value: 'isVip'},
-          { text: "", value: 'actions'},
-        ],
-        customers: [],
-        loading: true,
-        customerDialog: false,
-        customerName: "",
-        customerEmail: "",
-        customerPhone: "",
-        customerAge: 0,
-        customerPhoto: ""
-    }
+      customerDialog: false,
+      customerName: "",
+      customerEmail: "",
+      customerPhone: "",
+      customerAge: 0,
+      customerPhoto: "",
+
+      editDialog: false,
+      editForm: {
+        id: null,
+        name: "",
+        email: "",
+        phone: "",
+        age: 0,
+        isVip: false,
+      },
+    };
+  },
+  computed: {
+    filteredCustomers() {
+      if (!this.search) return this.customers;
+      const term = this.search.toLowerCase();
+      return this.customers.filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) ||
+          c.email.toLowerCase().includes(term) ||
+          c.phone.toLowerCase().includes(term)
+      );
+    },
   },
   methods: {
     getCustomers() {
-      this.$axios.get('/customers')
-      .then(response => {
-        console.log(response.data)
-        this.customers = response.data;
-        this.loading = false
-      })
-      .catch(err => {
-        console.log(err)
-      })
+      this.$axios
+        .get("/customers")
+        .then((res) => {
+          this.customers = res.data;
+          this.loading = false;
+        })
+        .catch((err) => {
+          console.error(err);
+          this.loading = false;
+        });
     },
-
     getCustomersDetails(item) {
-      console.log(item)
-
-    this.customerName = item.Name;
-    this.customerEmail = item.Email;
-    this.customerAge = item.Age;
-    this.customerPhone = item.Phone;
-    this.customerPhoto = item.profilePicture; 
-    this.customerDialog = true;
-    }
+      this.customerName = item.name;
+      this.customerEmail = item.email;
+      this.customerPhone = item.phone;
+      this.customerAge = item.age;
+      this.customerPhoto = item.profilePicture;
+      this.customerDialog = true;
+    },
+    openEditDialog(item) {
+      this.editForm = { ...item }; // Pre-fill form
+      this.editDialog = true;
+    },
+    saveEdit() {
+      this.$axios
+        .put(`/customers/${this.editForm.id}`, this.editForm)
+        .then(() => {
+          alert("Customer updated successfully!");
+          this.editDialog = false;
+          this.getCustomers(); // refresh list
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Error updating customer.");
+        });
+    },
+    deleteCustomer(id) {
+      if (confirm("Are you sure you want to delete this customer?")) {
+        this.$axios
+          .delete(`/customers/${id}`)
+          .then(() => {
+            alert("Customer deleted successfully!");
+            this.getCustomers();
+          })
+          .catch((err) => {
+            console.error(err);
+            alert("Error deleting customer.");
+          });
+      }
+    },
   },
-
   mounted() {
-    this.getCustomers()
-  }
-}
+    this.getCustomers();
+  },
+};
 </script>
